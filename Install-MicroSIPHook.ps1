@@ -17,6 +17,16 @@ $command = "`"$powerShell`" -NoLogo -NoProfile -NonInteractive -WindowStyle Hidd
 
 if ($PSCmdlet.ShouldProcess($MicroSipIni, "Back up to $backup and configure cmdCallAnswer")) {
     Copy-Item -LiteralPath $MicroSipIni -Destination $backup
+    $bytes = [System.IO.File]::ReadAllBytes($MicroSipIni)
+    if ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
+        $iniEncoding = [System.Text.Encoding]::Unicode
+    } elseif ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFE -and $bytes[1] -eq 0xFF) {
+        $iniEncoding = [System.Text.Encoding]::BigEndianUnicode
+    } elseif ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        $iniEncoding = [System.Text.UTF8Encoding]::new($true)
+    } else {
+        $iniEncoding = [System.Text.Encoding]::Default
+    }
     $lines = [System.IO.File]::ReadAllLines($MicroSipIni)
     $found = $false
     for ($i = 0; $i -lt $lines.Length; $i++) {
@@ -26,7 +36,7 @@ if ($PSCmdlet.ShouldProcess($MicroSipIni, "Back up to $backup and configure cmdC
         }
     }
     if (-not $found) { $lines += 'cmdCallAnswer=' + $command }
-    [System.IO.File]::WriteAllLines($MicroSipIni, $lines, [System.Text.UTF8Encoding]::new($true))
+    [System.IO.File]::WriteAllLines($MicroSipIni, $lines, $iniEncoding)
     Write-Output "Configured: $MicroSipIni"
     Write-Output "Backup: $backup"
 }
