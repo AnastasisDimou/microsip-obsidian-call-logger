@@ -67,9 +67,10 @@ Set `callsFolder` in the private `config.json`, for example:
 }
 ```
 
-For a copy button beside every number, open **Settings → Community plugins →
+For a copy button beside every name and number, open **Settings → Community plugins →
 Browse**, find **Copy Inline Code**, install it, and enable it. The logger
-writes each number as inline code, so the plugin can copy only that number.
+writes names and numbers as separate inline-code values, so either can be copied
+individually.
 
 ## Contact-name lookup
 
@@ -84,13 +85,13 @@ Short workplace extensions are compared exactly. With no match, the name is
 ```markdown
 # Calls — 23-07-2026
 
-- Answered: 09:42 — Ended: 09:57 — Duration: 00:15:08 — John Smith — `+30 210 123 4567`
+- Answered: 09:42 — Ended: 09:57 — Duration: 00:15:08 — `John Smith` — `+30 210 123 4567`
 
-- Answered: 11:17 — Ended: 11:20 — Duration: 00:03:19 — Unknown caller — `6941234567`
+- Answered: 11:17 — Ended: 11:20 — Duration: 00:03:19 — `Unknown caller` — `6941234567`
 ```
 
-Names remain plain text, numbers remain useful for pasting/dialing, and entries
-are appended in recording order without replacing unrelated note content.
+Names and numbers remain useful for copying, and entries are appended in
+recording order without replacing unrelated note content.
 While a call is active, its end time and duration display as `in progress`.
 Private state files let the end event update only the matching call; internal
 identifiers are never written to the Markdown note.

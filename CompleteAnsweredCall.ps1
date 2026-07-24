@@ -77,7 +77,7 @@ try {
     $dash = [char]0x2014
     $marker = "<!-- microsip-call:$($match.State.id) -->"
     $pendingLine = [string]$match.State.pendingLine
-    $completed = "- Answered: $($match.State.startTime) $dash Ended: $endTime $dash Duration: $duration $dash $($match.State.callerName) $dash ``$($match.State.number)``"
+    $completed = "- Answered: $($match.State.startTime) $dash Ended: $endTime $dash Duration: $duration $dash ``$($match.State.callerName)`` $dash ``$($match.State.number)``"
 
     $notePath = [string]$match.State.notePath
     if (-not [System.IO.File]::Exists($notePath)) { throw "Daily note is missing: $notePath" }

@@ -42,10 +42,10 @@ try {
     $dash = [char]0x2014
     foreach ($pattern in @(
         "# Calls $dash $expectedDate",
-        "John Smith $dash ``+302101112222``",
-        "$greekName $dash ``+30 210 123 4567``",
-        "Unknown caller $dash ``6941234567``",
-        "Wrapper Person $dash ``+302109998888``"
+        "``John Smith`` $dash ``+302101112222``",
+        "``$greekName`` $dash ``+30 210 123 4567``",
+        "``Unknown caller`` $dash ``6941234567``",
+        "``Wrapper Person`` $dash ``+302109998888``"
     )) {
         if (-not $text.Contains($pattern)) { throw "Expected output not found: $pattern" }
     }

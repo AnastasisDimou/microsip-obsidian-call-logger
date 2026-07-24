@@ -143,7 +143,7 @@ try {
     $dash = [char]0x2014
     $heading = "# Calls $dash $date`r`n`r`n"
     $callId = [guid]::NewGuid().ToString('N')
-    $pendingLine = "- Answered: $time $dash Ended: in progress $dash Duration: in progress $dash $callerName $dash ``$($caller.Number)``"
+    $pendingLine = "- Answered: $time $dash Ended: in progress $dash Duration: in progress $dash ``$callerName`` $dash ``$($caller.Number)``"
     $entry = "$pendingLine`r`n`r`n"
 
     [System.IO.Directory]::CreateDirectory($callsPath) | Out-Null
