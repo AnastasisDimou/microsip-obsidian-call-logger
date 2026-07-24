@@ -25,7 +25,7 @@ and unanswered calls are excluded.
 ## Installation
 
 1. Create `%USERPROFILE%\Scripts\MicroSIP`.
-2. Copy `LogAnsweredCall.ps1` there.
+2. Copy `LogAnsweredCall.ps1` and `LaunchAnsweredCall.vbs` there.
 3. Copy `config.example.json` there as `config.json`.
 4. Edit `callsFolder` in `config.json` to an absolute path in your vault.
 5. Close MicroSIP, then run `Install-MicroSIPHook.ps1`. It backs up the INI
@@ -41,9 +41,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-MicroSIPHook.p
 ## MicroSIP configuration
 
 The installer edits `%APPDATA%\MicroSIP\MicroSIP.ini` and sets
-`cmdCallAnswer` to launch the logger with the caller ID MicroSIP appends. The
-hook uses the full Windows PowerShell path, safe quoting, hidden window mode,
-and non-interactive execution. Portable installations can pass a different INI:
+`cmdCallAnswer` to launch a small Windows Script Host bridge with the caller ID
+MicroSIP appends. The bridge preserves caller-ID spacing and quotes, then starts
+PowerShell invisibly and non-interactively. Portable installations can pass a
+different INI:
 
 ```powershell
 .\Install-MicroSIPHook.ps1 -MicroSipIni 'D:\Apps\MicroSIP\MicroSIP.ini'

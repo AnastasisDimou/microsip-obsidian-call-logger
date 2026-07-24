@@ -123,6 +123,9 @@ try {
     }
 
     $rawCallerId = ($CallerId -join ' ').Trim()
+    if (-not $rawCallerId) {
+        $rawCallerId = [Environment]::GetEnvironmentVariable('MICROSIP_CALLER_ID', 'Process')
+    }
     if (-not $rawCallerId) { throw 'MicroSIP did not provide caller-ID information.' }
 
     $caller = Parse-CallerId $rawCallerId

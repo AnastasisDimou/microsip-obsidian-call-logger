@@ -7,6 +7,7 @@ $sandbox = Join-Path ([System.IO.Path]::GetTempPath()) ('microsip-call-logger-' 
 New-Item -ItemType Directory -Path $sandbox | Out-Null
 try {
     Copy-Item -LiteralPath $ScriptPath -Destination $sandbox
+    Copy-Item -LiteralPath (Join-Path (Split-Path -Parent $ScriptPath) 'LaunchAnsweredCall.vbs') -Destination $sandbox
     @"
 {
   "callsFolder": "$($sandbox.Replace('\','\\'))\\Calls",
@@ -20,16 +21,23 @@ try {
     & (Join-Path $sandbox 'LogAnsweredCall.ps1') '"John Smith" <sip:+302101112222@example.invalid>'
     & (Join-Path $sandbox 'LogAnsweredCall.ps1') '+30 210 123 4567'
     & (Join-Path $sandbox 'LogAnsweredCall.ps1') 'sip:6941234567@example.invalid'
+    & "$env:SystemRoot\System32\wscript.exe" //B //NoLogo (Join-Path $sandbox 'LaunchAnsweredCall.vbs') 'Wrapper Person <sip:+302109998888@example.invalid>'
 
     $note = Get-ChildItem -LiteralPath (Join-Path $sandbox 'Calls') -Filter '*.md' -File
-    $text = [System.IO.File]::ReadAllText($note.FullName, [System.Text.Encoding]::UTF8)
+    $deadline = (Get-Date).AddSeconds(5)
+    do {
+        $text = [System.IO.File]::ReadAllText($note.FullName, [System.Text.Encoding]::UTF8)
+        if ($text.Contains('+302109998888')) { break }
+        Start-Sleep -Milliseconds 50
+    } while ((Get-Date) -lt $deadline)
     $expectedDate = Get-Date -Format 'dd-MM-yyyy'
     $dash = [char]0x2014
     foreach ($pattern in @(
         "# Calls $dash $expectedDate",
         "John Smith $dash ``+302101112222``",
         "$greekName $dash ``+30 210 123 4567``",
-        "Unknown caller $dash ``6941234567``"
+        "Unknown caller $dash ``6941234567``",
+        "Wrapper Person $dash ``+302109998888``"
     )) {
         if (-not $text.Contains($pattern)) { throw "Expected output not found: $pattern" }
     }

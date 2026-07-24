@@ -1,19 +1,22 @@
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [string] $MicroSipIni = "$env:APPDATA\MicroSIP\MicroSIP.ini",
-    [string] $ScriptPath = "$env:USERPROFILE\Scripts\MicroSIP\LogAnsweredCall.ps1"
+    [string] $ScriptPath = "$env:USERPROFILE\Scripts\MicroSIP\LogAnsweredCall.ps1",
+    [string] $LauncherPath = "$env:USERPROFILE\Scripts\MicroSIP\LaunchAnsweredCall.vbs"
 )
 
 $ErrorActionPreference = 'Stop'
 $MicroSipIni = [System.IO.Path]::GetFullPath($MicroSipIni)
 $ScriptPath = [System.IO.Path]::GetFullPath($ScriptPath)
+$LauncherPath = [System.IO.Path]::GetFullPath($LauncherPath)
 if (-not (Test-Path -LiteralPath $MicroSipIni)) { throw "MicroSIP INI not found: $MicroSipIni" }
 if (-not (Test-Path -LiteralPath $ScriptPath)) { throw "Logger script not found: $ScriptPath" }
+if (-not (Test-Path -LiteralPath $LauncherPath)) { throw "Launcher not found: $LauncherPath" }
 
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $backup = "$MicroSipIni.backup-$stamp"
-$powerShell = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
-$command = "`"$powerShell`" -NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ScriptPath`""
+$wscript = "$env:SystemRoot\System32\wscript.exe"
+$command = "$wscript //B //NoLogo `"$LauncherPath`""
 
 if ($PSCmdlet.ShouldProcess($MicroSipIni, "Back up to $backup and configure cmdCallAnswer")) {
     Copy-Item -LiteralPath $MicroSipIni -Destination $backup
@@ -31,11 +34,13 @@ if ($PSCmdlet.ShouldProcess($MicroSipIni, "Back up to $backup and configure cmdC
     $found = $false
     for ($i = 0; $i -lt $lines.Length; $i++) {
         if ($lines[$i] -match '^cmdCallAnswer=') {
-            $lines[$i] = 'cmdCallAnswer=' + $command
+            # The outer quotes are consumed by the Windows INI parser. Inner
+            # quotes around LauncherPath survive and safely support spaces.
+            $lines[$i] = 'cmdCallAnswer="' + $command + '"'
             $found = $true
         }
     }
-    if (-not $found) { $lines += 'cmdCallAnswer=' + $command }
+    if (-not $found) { $lines += 'cmdCallAnswer="' + $command + '"' }
     [System.IO.File]::WriteAllLines($MicroSipIni, $lines, $iniEncoding)
     Write-Output "Configured: $MicroSipIni"
     Write-Output "Backup: $backup"
