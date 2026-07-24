@@ -8,6 +8,7 @@ $ErrorActionPreference = 'Stop'
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $configPath = Join-Path $scriptRoot 'config.json'
 $logDirectory = Join-Path $scriptRoot 'logs'
+$stateDirectory = Join-Path $scriptRoot 'state'
 $errorLog = Join-Path $logDirectory 'errors.log'
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
@@ -141,13 +142,28 @@ try {
     $notePath = Join-Path $callsPath ($date + '.md')
     $dash = [char]0x2014
     $heading = "# Calls $dash $date`r`n`r`n"
-    $entry = "- $time $dash $callerName $dash ``$($caller.Number)```r`n"
+    $callId = [guid]::NewGuid().ToString('N')
+    $marker = "<!-- microsip-call:$callId -->"
+    $entry = "- Answered: $time $dash Ended: in progress $dash Duration: in progress $dash $callerName $dash ``$($caller.Number)`` $dash Transferred: not reported by MicroSIP $marker`r`n"
 
     [System.IO.Directory]::CreateDirectory($callsPath) | Out-Null
+    [System.IO.Directory]::CreateDirectory($stateDirectory) | Out-Null
     if (-not [System.IO.File]::Exists($notePath)) {
         [System.IO.File]::WriteAllText($notePath, $heading, $utf8NoBom)
     }
     [System.IO.File]::AppendAllText($notePath, $entry, $utf8NoBom)
+
+    $state = [ordered]@{
+        id         = $callId
+        startedAt  = $now.ToString('o', [Globalization.CultureInfo]::InvariantCulture)
+        startTime  = $time
+        notePath   = $notePath
+        callerName = $callerName
+        number     = $caller.Number
+        numberKeys = @(Get-NumberKeys $caller.Number)
+    }
+    $stateJson = $state | ConvertTo-Json -Depth 3
+    [System.IO.File]::WriteAllText((Join-Path $stateDirectory "$callId.json"), $stateJson, $utf8NoBom)
 } catch {
     Write-DiagnosticError $_.Exception.Message
     exit 1

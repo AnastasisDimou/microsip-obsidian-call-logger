@@ -8,6 +8,7 @@ and unanswered calls are excluded.
 ## Main features
 
 - Answer-time timestamps in 24-hour `HH:mm` format
+- End timestamps and durations in `HH:mm:ss`
 - Daily files named `dd-MM-yyyy.md`
 - Caller name from caller ID, then MicroSIP contacts, then `Unknown caller`
 - Caller-ID parsing for plain numbers, SIP addresses, and display-name formats
@@ -25,7 +26,8 @@ and unanswered calls are excluded.
 ## Installation
 
 1. Create `%USERPROFILE%\Scripts\MicroSIP`.
-2. Copy `LogAnsweredCall.ps1` and `LaunchAnsweredCall.vbs` there.
+2. Copy `LogAnsweredCall.ps1`, `CompleteAnsweredCall.ps1`, and
+   `LaunchAnsweredCall.vbs` there.
 3. Copy `config.example.json` there as `config.json`.
 4. Edit `callsFolder` in `config.json` to an absolute path in your vault.
 5. Close MicroSIP, then run `Install-MicroSIPHook.ps1`. It backs up the INI
@@ -41,10 +43,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-MicroSIPHook.p
 ## MicroSIP configuration
 
 The installer edits `%APPDATA%\MicroSIP\MicroSIP.ini` and sets
-`cmdCallAnswer` to launch a small Windows Script Host bridge with the caller ID
-MicroSIP appends. The bridge preserves caller-ID spacing and quotes, then starts
-PowerShell invisibly and non-interactively. Portable installations can pass a
-different INI:
+`cmdCallAnswer` and `cmdCallEnd` to launch a small Windows Script Host bridge
+with the caller number MicroSIP appends. The bridge preserves caller-ID spacing
+and quotes, then starts PowerShell invisibly and non-interactively. Portable
+installations can pass a different INI:
 
 ```powershell
 .\Install-MicroSIPHook.ps1 -MicroSipIni 'D:\Apps\MicroSIP\MicroSIP.ini'
@@ -82,12 +84,15 @@ Short workplace extensions are compared exactly. With no match, the name is
 ```markdown
 # Calls — 23-07-2026
 
-- 09:42 — John Smith — `+30 210 123 4567`
-- 11:17 — Unknown caller — `6941234567`
+- Answered: 09:42 — Ended: 09:57 — Duration: 00:15:08 — John Smith — `+30 210 123 4567` — Transferred: not reported by MicroSIP
+- Answered: 11:17 — Ended: 11:20 — Duration: 00:03:19 — Unknown caller — `6941234567` — Transferred: not reported by MicroSIP
 ```
 
 Names remain plain text, numbers remain useful for pasting/dialing, and entries
-are appended in recording order without replacing existing note content.
+are appended in recording order without replacing unrelated note content.
+While a call is active, its end time and duration display as `in progress`.
+The hidden HTML marker at the end of each entry lets the end event update only
+the matching call.
 
 ## Configuration options
 
@@ -106,7 +111,8 @@ vault or MicroSIP configuration:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Test-Logger.ps1
 ```
 
-Then answer one controlled incoming call and confirm today's note is updated.
+Then answer one controlled incoming call, hang up, and confirm today's entry
+contains the answer time, end time, and duration.
 Place a second test call that is not answered and confirm no entry is added.
 Real caller-ID formatting depends on the PBX/provider, so test number-only,
 named, international, and contact-resolved calls relevant to your environment.
@@ -132,6 +138,9 @@ common local artifacts.
 ## Known limitations
 
 - The initial version handles one answered call at a time.
+- MicroSIP exposes only the caller number to `cmdCallAnswer` and `cmdCallEnd`.
+  It does not expose a transfer-success flag, so transfer status is recorded as
+  `not reported by MicroSIP` rather than an unreliable Yes/No guess.
 - Provider/PBX-specific caller-ID formats may need parser adjustments.
 - Greek national/international normalization is included; other national plans
   are not inferred.

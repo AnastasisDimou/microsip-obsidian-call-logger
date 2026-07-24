@@ -1,5 +1,6 @@
 config.json
 logs/
+state/
 *.log
 *.backup-*
 Calls/
