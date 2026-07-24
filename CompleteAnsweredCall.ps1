@@ -76,7 +76,7 @@ try {
     $endTime = $endedAt.ToString('HH:mm', [Globalization.CultureInfo]::InvariantCulture)
     $dash = [char]0x2014
     $marker = "<!-- microsip-call:$($match.State.id) -->"
-    $completed = "- Answered: $($match.State.startTime) $dash Ended: $endTime $dash Duration: $duration $dash $($match.State.callerName) $dash ``$($match.State.number)`` $dash Transferred: not reported by MicroSIP $marker"
+    $completed = "- Answered: $($match.State.startTime) $dash Ended: $endTime $dash Duration: $duration $dash $($match.State.callerName) $dash ``$($match.State.number)`` $marker"
 
     $notePath = [string]$match.State.notePath
     if (-not [System.IO.File]::Exists($notePath)) { throw "Daily note is missing: $notePath" }

@@ -84,8 +84,9 @@ Short workplace extensions are compared exactly. With no match, the name is
 ```markdown
 # Calls — 23-07-2026
 
-- Answered: 09:42 — Ended: 09:57 — Duration: 00:15:08 — John Smith — `+30 210 123 4567` — Transferred: not reported by MicroSIP
-- Answered: 11:17 — Ended: 11:20 — Duration: 00:03:19 — Unknown caller — `6941234567` — Transferred: not reported by MicroSIP
+- Answered: 09:42 — Ended: 09:57 — Duration: 00:15:08 — John Smith — `+30 210 123 4567`
+
+- Answered: 11:17 — Ended: 11:20 — Duration: 00:03:19 — Unknown caller — `6941234567`
 ```
 
 Names remain plain text, numbers remain useful for pasting/dialing, and entries
@@ -138,9 +139,6 @@ common local artifacts.
 ## Known limitations
 
 - The initial version handles one answered call at a time.
-- MicroSIP exposes only the caller number to `cmdCallAnswer` and `cmdCallEnd`.
-  It does not expose a transfer-success flag, so transfer status is recorded as
-  `not reported by MicroSIP` rather than an unreliable Yes/No guess.
 - Provider/PBX-specific caller-ID formats may need parser adjustments.
 - Greek national/international normalization is included; other national plans
   are not inferred.

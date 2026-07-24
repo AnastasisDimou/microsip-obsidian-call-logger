@@ -45,12 +45,21 @@ try {
         "John Smith $dash ``+302101112222``",
         "$greekName $dash ``+30 210 123 4567``",
         "Unknown caller $dash ``6941234567``",
-        "Wrapper Person $dash ``+302109998888`` $dash Transferred: not reported by MicroSIP"
+        "Wrapper Person $dash ``+302109998888``"
     )) {
         if (-not $text.Contains($pattern)) { throw "Expected output not found: $pattern" }
     }
     if ($text -notmatch 'Answered: \d{2}:\d{2}.+Ended: \d{2}:\d{2}.+Duration: \d{2}:\d{2}:\d{2}.+Wrapper Person') {
         throw 'Completed call did not include answer time, end time, and HH:mm:ss duration.'
+    }
+    if ($text -match 'Transferred:') {
+        throw 'Transfer logging was not removed.'
+    }
+    $callLines = @($text -split '\r?\n' | Where-Object { $_ -match '^- Answered:' })
+    foreach ($callLine in $callLines) {
+        if (-not $text.Contains($callLine + [Environment]::NewLine + [Environment]::NewLine)) {
+            throw 'A call entry was not followed by a blank line.'
+        }
     }
     Write-Output 'All logger tests passed.'
 } finally {

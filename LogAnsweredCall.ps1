@@ -144,7 +144,7 @@ try {
     $heading = "# Calls $dash $date`r`n`r`n"
     $callId = [guid]::NewGuid().ToString('N')
     $marker = "<!-- microsip-call:$callId -->"
-    $entry = "- Answered: $time $dash Ended: in progress $dash Duration: in progress $dash $callerName $dash ``$($caller.Number)`` $dash Transferred: not reported by MicroSIP $marker`r`n"
+    $entry = "- Answered: $time $dash Ended: in progress $dash Duration: in progress $dash $callerName $dash ``$($caller.Number)`` $marker`r`n`r`n"
 
     [System.IO.Directory]::CreateDirectory($callsPath) | Out-Null
     [System.IO.Directory]::CreateDirectory($stateDirectory) | Out-Null
