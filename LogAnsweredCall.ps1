@@ -143,8 +143,8 @@ try {
     $dash = [char]0x2014
     $heading = "# Calls $dash $date`r`n`r`n"
     $callId = [guid]::NewGuid().ToString('N')
-    $marker = "<!-- microsip-call:$callId -->"
-    $entry = "- Answered: $time $dash Ended: in progress $dash Duration: in progress $dash $callerName $dash ``$($caller.Number)`` $marker`r`n`r`n"
+    $pendingLine = "- Answered: $time $dash Ended: in progress $dash Duration: in progress $dash $callerName $dash ``$($caller.Number)``"
+    $entry = "$pendingLine`r`n`r`n"
 
     [System.IO.Directory]::CreateDirectory($callsPath) | Out-Null
     [System.IO.Directory]::CreateDirectory($stateDirectory) | Out-Null
@@ -161,6 +161,7 @@ try {
         callerName = $callerName
         number     = $caller.Number
         numberKeys = @(Get-NumberKeys $caller.Number)
+        pendingLine = $pendingLine
     }
     $stateJson = $state | ConvertTo-Json -Depth 3
     [System.IO.File]::WriteAllText((Join-Path $stateDirectory "$callId.json"), $stateJson, $utf8NoBom)

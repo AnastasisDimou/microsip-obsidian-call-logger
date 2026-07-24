@@ -92,8 +92,8 @@ Short workplace extensions are compared exactly. With no match, the name is
 Names remain plain text, numbers remain useful for pasting/dialing, and entries
 are appended in recording order without replacing unrelated note content.
 While a call is active, its end time and duration display as `in progress`.
-The hidden HTML marker at the end of each entry lets the end event update only
-the matching call.
+Private state files let the end event update only the matching call; internal
+identifiers are never written to the Markdown note.
 
 ## Configuration options
 

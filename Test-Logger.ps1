@@ -55,6 +55,9 @@ try {
     if ($text -match 'Transferred:') {
         throw 'Transfer logging was not removed.'
     }
+    if ($text -match '<!-- microsip-call:') {
+        throw 'An internal call-matching marker leaked into Markdown.'
+    }
     $callLines = @($text -split '\r?\n' | Where-Object { $_ -match '^- Answered:' })
     foreach ($callLine in $callLines) {
         if (-not $text.Contains($callLine + [Environment]::NewLine + [Environment]::NewLine)) {

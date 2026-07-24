@@ -76,20 +76,22 @@ try {
     $endTime = $endedAt.ToString('HH:mm', [Globalization.CultureInfo]::InvariantCulture)
     $dash = [char]0x2014
     $marker = "<!-- microsip-call:$($match.State.id) -->"
-    $completed = "- Answered: $($match.State.startTime) $dash Ended: $endTime $dash Duration: $duration $dash $($match.State.callerName) $dash ``$($match.State.number)`` $marker"
+    $pendingLine = [string]$match.State.pendingLine
+    $completed = "- Answered: $($match.State.startTime) $dash Ended: $endTime $dash Duration: $duration $dash $($match.State.callerName) $dash ``$($match.State.number)``"
 
     $notePath = [string]$match.State.notePath
     if (-not [System.IO.File]::Exists($notePath)) { throw "Daily note is missing: $notePath" }
     $lines = [System.IO.File]::ReadAllLines($notePath, [System.Text.Encoding]::UTF8)
     $found = $false
-    for ($i = 0; $i -lt $lines.Length; $i++) {
-        if ($lines[$i].Contains($marker)) {
+    for ($i = $lines.Length - 1; $i -ge 0; $i--) {
+        # Marker matching supports calls that began on an older script version.
+        if (($pendingLine -and $lines[$i] -eq $pendingLine) -or $lines[$i].Contains($marker)) {
             $lines[$i] = $completed
             $found = $true
             break
         }
     }
-    if (-not $found) { throw "Call marker was not found in daily note: $($match.State.id)" }
+    if (-not $found) { throw "Pending call entry was not found in the daily note." }
 
     [System.IO.File]::WriteAllLines($notePath, $lines, $utf8NoBom)
     Remove-Item -LiteralPath $match.File -Force
