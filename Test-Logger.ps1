@@ -31,26 +31,45 @@ try {
         if ($text.Contains('+302109998888')) { break }
         Start-Sleep -Milliseconds 50
     } while ((Get-Date) -lt $deadline)
+    $deadline = (Get-Date).AddSeconds(5)
+    do {
+        $wrapperStateFile = Get-ChildItem -LiteralPath (Join-Path $sandbox 'state') -Filter '*.json' -File |
+            Where-Object {
+                $candidateState = [System.IO.File]::ReadAllText($_.FullName, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+                $candidateState.number -eq '+302109998888'
+            } | Select-Object -First 1
+        if ($wrapperStateFile) { break }
+        Start-Sleep -Milliseconds 50
+    } while ((Get-Date) -lt $deadline)
+    if (-not $wrapperStateFile) { throw 'Wrapper answer state was not created.' }
+    $wrapperState = [System.IO.File]::ReadAllText($wrapperStateFile.FullName, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
+    $wrapperState.startedAt = [datetimeoffset]::Now.AddSeconds(-3666).ToString('o')
+    [System.IO.File]::WriteAllText(
+        $wrapperStateFile.FullName,
+        ($wrapperState | ConvertTo-Json -Depth 3),
+        [System.Text.UTF8Encoding]::new($false)
+    )
     & "$env:SystemRoot\System32\wscript.exe" //B //NoLogo (Join-Path $sandbox 'LaunchAnsweredCall.vbs') end '+302109998888'
     $deadline = (Get-Date).AddSeconds(5)
     do {
         $text = [System.IO.File]::ReadAllText($note.FullName, [System.Text.Encoding]::UTF8)
-        if ($text -match 'Duration: \d{2}:\d{2}:\d{2}.+Wrapper Person') { break }
+        if ($text -match '\*\*Duration:\*\* 1 hr 1 min \d+ sec') { break }
         Start-Sleep -Milliseconds 50
     } while ((Get-Date) -lt $deadline)
     $expectedDate = Get-Date -Format 'dd-MM-yyyy'
     $dash = [char]0x2014
+    $middleDot = [char]0x00B7
     foreach ($pattern in @(
         "# Calls $dash $expectedDate",
-        "``John Smith`` $dash ``+302101112222``",
-        "``$greekName`` $dash ``+30 210 123 4567``",
-        "``Unknown caller`` $dash ``6941234567``",
-        "``Wrapper Person`` $dash ``+302109998888``"
+        "**Caller:** ``John Smith`` $middleDot **Phone:** ``+302101112222``",
+        "**Caller:** ``$greekName`` $middleDot **Phone:** ``+30 210 123 4567``",
+        "**Caller:** ``Unknown caller`` $middleDot **Phone:** ``6941234567``",
+        "**Caller:** ``Wrapper Person`` $middleDot **Phone:** ``+302109998888``"
     )) {
         if (-not $text.Contains($pattern)) { throw "Expected output not found: $pattern" }
     }
-    if ($text -notmatch 'Answered: \d{2}:\d{2}.+Ended: \d{2}:\d{2}.+Duration: \d{2}:\d{2}:\d{2}.+Wrapper Person') {
-        throw 'Completed call did not include answer time, end time, and HH:mm:ss duration.'
+    if ($text -notmatch '(?s)- \*\*Answered:\*\* \d{2}:\d{2}.+?\*\*Ended:\*\* \d{2}:\d{2}.+?\*\*Duration:\*\* 1 hr 1 min \d+ sec  \r?\n  \*\*Caller:\*\* `Wrapper Person`') {
+        throw 'Completed call did not use the requested two-line layout and human-readable duration.'
     }
     if ($text -match 'Transferred:') {
         throw 'Transfer logging was not removed.'
@@ -58,9 +77,9 @@ try {
     if ($text -match '<!-- microsip-call:') {
         throw 'An internal call-matching marker leaked into Markdown.'
     }
-    $callLines = @($text -split '\r?\n' | Where-Object { $_ -match '^- Answered:' })
-    foreach ($callLine in $callLines) {
-        if (-not $text.Contains($callLine + [Environment]::NewLine + [Environment]::NewLine)) {
+    $callerLines = @($text -split '\r?\n' | Where-Object { $_ -match '^  \*\*Caller:\*\*' })
+    foreach ($callerLine in $callerLines) {
+        if (-not $text.Contains($callerLine + [Environment]::NewLine + [Environment]::NewLine)) {
             throw 'A call entry was not followed by a blank line.'
         }
     }

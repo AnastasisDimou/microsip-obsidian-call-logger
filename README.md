@@ -8,7 +8,7 @@ and unanswered calls are excluded.
 ## Main features
 
 - Answer-time timestamps in 24-hour `HH:mm` format
-- End timestamps and durations in `HH:mm:ss`
+- End timestamps and human-readable hour/minute/second durations
 - Daily files named `dd-MM-yyyy.md`
 - Caller name from caller ID, then MicroSIP contacts, then `Unknown caller`
 - Caller-ID parsing for plain numbers, SIP addresses, and display-name formats
@@ -85,9 +85,11 @@ Short workplace extensions are compared exactly. With no match, the name is
 ```markdown
 # Calls — 23-07-2026
 
-- Answered: 09:42 — Ended: 09:57 — Duration: 00:15:08 — `John Smith` — `+30 210 123 4567`
+- **Answered:** 09:42 · **Ended:** 09:57 · **Duration:** 15 min 8 sec
+  **Caller:** `John Smith` · **Phone:** `+30 210 123 4567`
 
-- Answered: 11:17 — Ended: 11:20 — Duration: 00:03:19 — `Unknown caller` — `6941234567`
+- **Answered:** 11:17 · **Ended:** 11:20 · **Duration:** 3 min 19 sec
+  **Caller:** `Unknown caller` · **Phone:** `6941234567`
 ```
 
 Names and numbers remain useful for copying, and entries are appended in

@@ -72,28 +72,43 @@ try {
     $hours = [int][Math]::Floor($seconds / 3600)
     $minutes = [int][Math]::Floor(($seconds % 3600) / 60)
     $remainingSeconds = $seconds % 60
-    $duration = '{0:D2}:{1:D2}:{2:D2}' -f $hours, $minutes, $remainingSeconds
+    $durationParts = [System.Collections.Generic.List[string]]::new()
+    if ($hours -gt 0) { $durationParts.Add("$hours hr") }
+    if ($minutes -gt 0) { $durationParts.Add("$minutes min") }
+    if ($remainingSeconds -gt 0 -or $durationParts.Count -eq 0) {
+        $durationParts.Add("$remainingSeconds sec")
+    }
+    $duration = $durationParts -join ' '
     $endTime = $endedAt.ToString('HH:mm', [Globalization.CultureInfo]::InvariantCulture)
-    $dash = [char]0x2014
+    $middleDot = [char]0x00B7
     $marker = "<!-- microsip-call:$($match.State.id) -->"
     $pendingLine = [string]$match.State.pendingLine
-    $completed = "- Answered: $($match.State.startTime) $dash Ended: $endTime $dash Duration: $duration $dash ``$($match.State.callerName)`` $dash ``$($match.State.number)``"
+    $callerLine = [string]$match.State.callerLine
+    if (-not $callerLine) {
+        $callerLine = "  **Caller:** ``$($match.State.callerName)`` $middleDot **Phone:** ``$($match.State.number)``"
+    }
+    $completed = "- **Answered:** $($match.State.startTime) $middleDot **Ended:** $endTime $middleDot **Duration:** $duration  "
 
     $notePath = [string]$match.State.notePath
     if (-not [System.IO.File]::Exists($notePath)) { throw "Daily note is missing: $notePath" }
     $lines = [System.IO.File]::ReadAllLines($notePath, [System.Text.Encoding]::UTF8)
+    $lineList = [System.Collections.Generic.List[string]]::new()
+    foreach ($line in $lines) { $lineList.Add($line) }
     $found = $false
-    for ($i = $lines.Length - 1; $i -ge 0; $i--) {
+    for ($i = $lineList.Count - 1; $i -ge 0; $i--) {
         # Marker matching supports calls that began on an older script version.
-        if (($pendingLine -and $lines[$i] -eq $pendingLine) -or $lines[$i].Contains($marker)) {
-            $lines[$i] = $completed
+        if (($pendingLine -and $lineList[$i] -eq $pendingLine) -or $lineList[$i].Contains($marker)) {
+            $lineList[$i] = $completed
+            if ($i + 1 -ge $lineList.Count -or $lineList[$i + 1] -ne $callerLine) {
+                $lineList.Insert($i + 1, $callerLine)
+            }
             $found = $true
             break
         }
     }
     if (-not $found) { throw "Pending call entry was not found in the daily note." }
 
-    [System.IO.File]::WriteAllLines($notePath, $lines, $utf8NoBom)
+    [System.IO.File]::WriteAllLines($notePath, $lineList.ToArray(), $utf8NoBom)
     Remove-Item -LiteralPath $match.File -Force
 } catch {
     Write-DiagnosticError $_.Exception.Message

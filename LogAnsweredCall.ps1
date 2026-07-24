@@ -141,10 +141,12 @@ try {
     $time = $now.ToString('HH:mm', [Globalization.CultureInfo]::InvariantCulture)
     $notePath = Join-Path $callsPath ($date + '.md')
     $dash = [char]0x2014
+    $middleDot = [char]0x00B7
     $heading = "# Calls $dash $date`r`n`r`n"
     $callId = [guid]::NewGuid().ToString('N')
-    $pendingLine = "- Answered: $time $dash Ended: in progress $dash Duration: in progress $dash ``$callerName`` $dash ``$($caller.Number)``"
-    $entry = "$pendingLine`r`n`r`n"
+    $pendingLine = "- **Answered:** $time $middleDot **Ended:** in progress $middleDot **Duration:** in progress  "
+    $callerLine = "  **Caller:** ``$callerName`` $middleDot **Phone:** ``$($caller.Number)``"
+    $entry = "$pendingLine`r`n$callerLine`r`n`r`n"
 
     [System.IO.Directory]::CreateDirectory($callsPath) | Out-Null
     [System.IO.Directory]::CreateDirectory($stateDirectory) | Out-Null
@@ -162,6 +164,7 @@ try {
         number     = $caller.Number
         numberKeys = @(Get-NumberKeys $caller.Number)
         pendingLine = $pendingLine
+        callerLine = $callerLine
     }
     $stateJson = $state | ConvertTo-Json -Depth 3
     [System.IO.File]::WriteAllText((Join-Path $stateDirectory "$callId.json"), $stateJson, $utf8NoBom)
