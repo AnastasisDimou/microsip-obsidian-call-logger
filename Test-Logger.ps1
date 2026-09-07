@@ -22,6 +22,10 @@ try {
     & (Join-Path $sandbox 'LogAnsweredCall.ps1') '"John Smith" <sip:+302101112222@example.invalid>'
     & (Join-Path $sandbox 'LogAnsweredCall.ps1') '+30 210 123 4567'
     & (Join-Path $sandbox 'LogAnsweredCall.ps1') 'sip:6941234567@example.invalid'
+    # Keep the wrapper test as the sole active call so it exercises the
+    # caller-number-omitted cmdCallEnd fallback without ambiguity.
+    Get-ChildItem -LiteralPath (Join-Path $sandbox 'state') -Filter '*.json' -File |
+        Remove-Item -Force
     & "$env:SystemRoot\System32\wscript.exe" //B //NoLogo (Join-Path $sandbox 'LaunchAnsweredCall.vbs') answer 'Wrapper Person <sip:+302109998888@example.invalid>'
 
     $note = Get-ChildItem -LiteralPath (Join-Path $sandbox 'Calls') -Filter '*.md' -File
@@ -49,7 +53,9 @@ try {
         ($wrapperState | ConvertTo-Json -Depth 3),
         [System.Text.UTF8Encoding]::new($false)
     )
-    & "$env:SystemRoot\System32\wscript.exe" //B //NoLogo (Join-Path $sandbox 'LaunchAnsweredCall.vbs') end '+302109998888'
+    # MicroSIP 3.22.12 may omit the caller number from cmdCallEnd. With one
+    # active answered call, the completion script must still finish it.
+    & "$env:SystemRoot\System32\wscript.exe" //B //NoLogo (Join-Path $sandbox 'LaunchAnsweredCall.vbs') end
     $deadline = (Get-Date).AddSeconds(5)
     do {
         $text = [System.IO.File]::ReadAllText($note.FullName, [System.Text.Encoding]::UTF8)

@@ -47,12 +47,15 @@ try {
         $rawCallerId = [Environment]::GetEnvironmentVariable('MICROSIP_CALLER_ID', 'Process')
     }
     $endKeys = @(Get-NumberKeys $rawCallerId)
-    if ($endKeys.Count -eq 0) { exit 0 }
 
     $candidates = foreach ($file in Get-ChildItem -LiteralPath $stateDirectory -Filter '*.json' -File) {
         try {
             $state = [System.IO.File]::ReadAllText($file.FullName, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
-            $matches = @($state.numberKeys | Where-Object { $endKeys -contains [string]$_ }).Count -gt 0
+            # Some MicroSIP versions omit the caller number from cmdCallEnd.
+            # In that case all active states are candidates; ambiguity is
+            # rejected below. The initial design supports one call at a time.
+            $matches = $endKeys.Count -eq 0 -or
+                @($state.numberKeys | Where-Object { $endKeys -contains [string]$_ }).Count -gt 0
             if ($matches) {
                 [pscustomobject]@{
                     File  = $file.FullName
@@ -63,6 +66,10 @@ try {
         } catch {
             Write-DiagnosticError "Could not read call state '$($file.Name)': $($_.Exception.Message)"
         }
+    }
+    $candidates = @($candidates)
+    if ($candidates.Count -gt 1 -and $endKeys.Count -eq 0) {
+        throw 'MicroSIP omitted the caller number and more than one active call state exists; refusing an ambiguous update.'
     }
     $match = $candidates | Sort-Object Start -Descending | Select-Object -First 1
     if (-not $match) { exit 0 }

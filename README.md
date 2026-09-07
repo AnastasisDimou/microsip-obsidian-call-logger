@@ -98,6 +98,10 @@ While a call is active, its end time and duration display as `in progress`.
 Private state files let the end event update only the matching call; internal
 identifiers are never written to the Markdown note.
 
+If MicroSIP omits the caller number from `cmdCallEnd`, the logger safely
+completes the sole active answered call. It refuses the update when multiple
+active states would make the match ambiguous.
+
 ## Configuration options
 
 `config.json` supports:
