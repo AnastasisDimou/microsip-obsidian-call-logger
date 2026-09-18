@@ -50,6 +50,8 @@ function Get-NumberKeys {
     return @($keys | Select-Object -Unique)
 }
 
+. (Join-Path $scriptRoot 'CallerLookup.ps1')
+
 function Parse-CallerId {
     param([string] $Raw)
 
@@ -134,25 +136,55 @@ try {
     if (-not $callerName) {
         $callerName = Find-ContactName $caller.Number ([Environment]::ExpandEnvironmentVariables([string]$config.contactsFile))
     }
+    if (-not $callerName) {
+        $callerName = Find-RecentCallLogName $caller.Number (Get-MicroSipCallLogPath $config) ([datetimeoffset]::Now)
+    }
     if (-not $callerName) { $callerName = 'Unknown caller' }
 
     $now = Get-Date
     $date = $now.ToString('dd-MM-yyyy', [Globalization.CultureInfo]::InvariantCulture)
     $time = $now.ToString('HH:mm', [Globalization.CultureInfo]::InvariantCulture)
     $notePath = Join-Path $callsPath ($date + '.md')
-    $dash = [char]0x2014
+    $arrow = [char]0x2192
     $middleDot = [char]0x00B7
-    $heading = "# Calls $dash $date`r`n`r`n"
     $callId = [guid]::NewGuid().ToString('N')
-    $pendingLine = "- **Answered:** $time $middleDot **Ended:** in progress $middleDot **Duration:** in progress  "
-    $callerLine = "  **Caller:** ``$callerName`` $middleDot **Phone:** ``$($caller.Number)``"
-    $entry = "$pendingLine`r`n$callerLine`r`n`r`n"
 
     [System.IO.Directory]::CreateDirectory($callsPath) | Out-Null
     [System.IO.Directory]::CreateDirectory($stateDirectory) | Out-Null
     if (-not [System.IO.File]::Exists($notePath)) {
-        [System.IO.File]::WriteAllText($notePath, $heading, $utf8NoBom)
+        [System.IO.File]::WriteAllText($notePath, '', $utf8NoBom)
     }
+    $existingText = [System.IO.File]::ReadAllText($notePath, [System.Text.Encoding]::UTF8)
+    $callNumbers = @([regex]::Matches($existingText, '(?m)^#{1,2} Call (?<number>\d+)\s*$') | ForEach-Object {
+        [int]$_.Groups['number'].Value
+    })
+    if ($callNumbers.Count -gt 0) {
+        $callNumber = 1 + ($callNumbers | Measure-Object -Maximum).Maximum
+    } else {
+        # Continue numbering correctly when today's note began with the older
+        # list format before this version was installed.
+        $callNumber = 1 + [regex]::Matches($existingText, '(?m)^\s{1,2}\*\*Caller:\*\*').Count
+    }
+    $callHeading = "# Call $callNumber"
+    $pendingLine = "**$time $arrow in progress - in progress**"
+    $callerLine = " **Caller:** ``$callerName`` $middleDot **Phone:** ``$($caller.Number)``"
+    $entryPrefix = ''
+    if ($existingText.Length -gt 0) {
+        if ($existingText -match '(?:\r\n|\n|\r)$') {
+            # One final line break ends the last line; a second creates the
+            # blank line that separates user notes from the next call.
+            if ($existingText -notmatch '(?:\r\n|\n|\r)[ \t]*(?:\r\n|\n|\r)$') {
+                $entryPrefix = "`r`n"
+            }
+        } elseif ($existingText -match '(?:\r\n|\n|\r)[ \t]*$') {
+            # A whitespace-only final line is already the requested gap, but
+            # it still needs to be terminated before the heading is written.
+            $entryPrefix = "`r`n"
+        } else {
+            $entryPrefix = "`r`n`r`n"
+        }
+    }
+    $entry = "$entryPrefix$callHeading`r`n`r`n$pendingLine`r`n`r`n$callerLine`r`n`r`n---`r`n`r`n"
     [System.IO.File]::AppendAllText($notePath, $entry, $utf8NoBom)
 
     $state = [ordered]@{
@@ -163,6 +195,8 @@ try {
         callerName = $callerName
         number     = $caller.Number
         numberKeys = @(Get-NumberKeys $caller.Number)
+        formatVersion = 2
+        callHeading = $callHeading
         pendingLine = $pendingLine
         callerLine = $callerLine
     }

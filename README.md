@@ -9,8 +9,9 @@ and unanswered calls are excluded.
 
 - Answer-time timestamps in 24-hour `HH:mm` format
 - End timestamps and human-readable hour/minute/second durations
+- Numbered `# Call N` sections with room for notes after each separator
 - Daily files named `dd-MM-yyyy.md`
-- Caller name from caller ID, then MicroSIP contacts, then `Unknown caller`
+- Caller name from caller ID, MicroSIP contacts, or MicroSIP call history
 - Caller-ID parsing for plain numbers, SIP addresses, and display-name formats
 - Greek `+30`, `0030`, and national-number contact matching
 - UTF-8 Markdown, safe appends, automatic folder/note creation
@@ -26,8 +27,8 @@ and unanswered calls are excluded.
 ## Installation
 
 1. Create `%USERPROFILE%\Scripts\MicroSIP`.
-2. Copy `LogAnsweredCall.ps1`, `CompleteAnsweredCall.ps1`, and
-   `LaunchAnsweredCall.vbs` there.
+2. Copy `LogAnsweredCall.ps1`, `CompleteAnsweredCall.ps1`,
+   `CallerLookup.ps1`, and `LaunchAnsweredCall.vbs` there.
 3. Copy `config.example.json` there as `config.json`.
 4. Edit `callsFolder` in `config.json` to an absolute path in your vault.
 5. Close MicroSIP, then run `Install-MicroSIPHook.ps1`. It backs up the INI
@@ -63,7 +64,8 @@ Set `callsFolder` in the private `config.json`, for example:
 ```json
 {
   "callsFolder": "C:\\Users\\YOUR_WINDOWS_USER\\Documents\\YOUR_VAULT\\Calls",
-  "contactsFile": "%APPDATA%\\MicroSIP\\Contacts.xml"
+  "contactsFile": "%APPDATA%\\MicroSIP\\Contacts.xml",
+  "callLogFile": "%APPDATA%\\MicroSIP\\call_log.db"
 }
 ```
 
@@ -75,7 +77,10 @@ individually.
 ## Contact-name lookup
 
 The logger prefers a usable name in MicroSIP's caller-ID argument. Otherwise,
-it checks the `number`, `phone`, and `mobile` fields in `Contacts.xml`.
+it checks the `number`, `phone`, and `mobile` fields in `Contacts.xml`, followed
+by the matching recent entry in MicroSIP's `call_log.db`. The call-history
+lookup is read-only and is retried when the call ends, after MicroSIP has
+finished updating the record.
 International Greek `+30`/`0030` forms are matched to 10-digit national forms.
 Short workplace extensions are compared exactly. With no match, the name is
 `Unknown caller`.
@@ -83,18 +88,27 @@ Short workplace extensions are compared exactly. With no match, the name is
 ## Daily-note format
 
 ```markdown
-# Calls — 23-07-2026
+# Call 1
 
-- **Answered:** 09:42 · **Ended:** 09:57 · **Duration:** 15 min 8 sec
-  **Caller:** `John Smith` · **Phone:** `+30 210 123 4567`
+**09:42 → 09:57 - 15 min 8 sec**
 
-- **Answered:** 11:17 · **Ended:** 11:20 · **Duration:** 3 min 19 sec
-  **Caller:** `Unknown caller` · **Phone:** `6941234567`
+ **Caller:** `John Smith` · **Phone:** `+30 210 123 4567`
+
+---
+
+# Call 2
+
+**11:17 → 11:20 - 3 min 19 sec**
+
+ **Caller:** `Unknown caller` · **Phone:** `6941234567`
+
+---
 ```
 
 Names and numbers remain useful for copying, and entries are appended in
-recording order without replacing unrelated note content.
-While a call is active, its end time and duration display as `in progress`.
+recording order without replacing unrelated note content. Text added after a
+call's `---` separator is left untouched. While a call is active, its end time
+and duration display as `in progress`.
 Private state files let the end event update only the matching call; internal
 identifiers are never written to the Markdown note.
 
@@ -109,6 +123,8 @@ active states would make the match ambiguous.
 - `callsFolder` (required): absolute destination folder for daily notes
 - `contactsFile` (optional): MicroSIP XML contacts path; environment variables
   such as `%APPDATA%` are expanded
+- `callLogFile` (optional): MicroSIP call-history database path; defaults to
+  `%APPDATA%\MicroSIP\call_log.db`
 
 ## Testing
 

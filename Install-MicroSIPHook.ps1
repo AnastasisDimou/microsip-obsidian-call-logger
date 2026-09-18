@@ -14,6 +14,8 @@ if (-not (Test-Path -LiteralPath $ScriptPath)) { throw "Logger script not found:
 if (-not (Test-Path -LiteralPath $LauncherPath)) { throw "Launcher not found: $LauncherPath" }
 $completionScript = Join-Path (Split-Path -Parent $ScriptPath) 'CompleteAnsweredCall.ps1'
 if (-not (Test-Path -LiteralPath $completionScript)) { throw "Completion script not found: $completionScript" }
+$lookupScript = Join-Path (Split-Path -Parent $ScriptPath) 'CallerLookup.ps1'
+if (-not (Test-Path -LiteralPath $lookupScript)) { throw "Caller lookup script not found: $lookupScript" }
 
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $backup = "$MicroSipIni.backup-$stamp"

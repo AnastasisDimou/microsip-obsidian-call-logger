@@ -1,4 +1,5 @@
 {
   "callsFolder": "C:\\Users\\YOUR_WINDOWS_USER\\OneDrive\\Documents\\YOUR_VAULT\\Calls",
-  "contactsFile": "%APPDATA%\\MicroSIP\\Contacts.xml"
+  "contactsFile": "%APPDATA%\\MicroSIP\\Contacts.xml",
+  "callLogFile": "%APPDATA%\\MicroSIP\\call_log.db"
 }

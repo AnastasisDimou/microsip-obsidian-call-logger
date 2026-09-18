@@ -6,6 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$configPath = Join-Path $scriptRoot 'config.json'
 $stateDirectory = Join-Path $scriptRoot 'state'
 $logDirectory = Join-Path $scriptRoot 'logs'
 $errorLog = Join-Path $logDirectory 'errors.log'
@@ -36,6 +37,15 @@ function Get-NumberKeys {
     }
     return @($keys | Select-Object -Unique)
 }
+
+function Clean-MarkdownText {
+    param([string] $Value, [string] $Fallback)
+    $clean = ($Value -replace '[\r\n]+', ' ' -replace '[`|]', '').Trim()
+    if ([string]::IsNullOrWhiteSpace($clean)) { return $Fallback }
+    return $clean
+}
+
+. (Join-Path $scriptRoot 'CallerLookup.ps1')
 
 try {
     # cmdCallEnd also fires for outgoing and unanswered calls. Without answer
@@ -87,14 +97,35 @@ try {
     }
     $duration = $durationParts -join ' '
     $endTime = $endedAt.ToString('HH:mm', [Globalization.CultureInfo]::InvariantCulture)
+    $arrow = [char]0x2192
     $middleDot = [char]0x00B7
     $marker = "<!-- microsip-call:$($match.State.id) -->"
     $pendingLine = [string]$match.State.pendingLine
-    $callerLine = [string]$match.State.callerLine
+    $originalCallerLine = [string]$match.State.callerLine
+    $callerLine = $originalCallerLine
+    if ([string]$match.State.callerName -eq 'Unknown caller') {
+        $config = $null
+        if (Test-Path -LiteralPath $configPath) {
+            $config = Get-Content -Raw -LiteralPath $configPath | ConvertFrom-Json
+        }
+        $resolvedName = Find-RecentCallLogName ([string]$match.State.number) (Get-MicroSipCallLogPath $config) $match.Start
+        if ($resolvedName) {
+            $match.State.callerName = $resolvedName
+            if ([int]$match.State.formatVersion -ge 2) {
+                $callerLine = " **Caller:** ``$resolvedName`` $middleDot **Phone:** ``$($match.State.number)``"
+            } else {
+                $callerLine = "  **Caller:** ``$resolvedName`` $middleDot **Phone:** ``$($match.State.number)``"
+            }
+        }
+    }
     if (-not $callerLine) {
         $callerLine = "  **Caller:** ``$($match.State.callerName)`` $middleDot **Phone:** ``$($match.State.number)``"
     }
-    $completed = "- **Answered:** $($match.State.startTime) $middleDot **Ended:** $endTime $middleDot **Duration:** $duration  "
+    if ([int]$match.State.formatVersion -ge 2) {
+        $completed = "**$($match.State.startTime) $arrow $endTime - $duration**"
+    } else {
+        $completed = "- **Answered:** $($match.State.startTime) $middleDot **Ended:** $endTime $middleDot **Duration:** $duration  "
+    }
 
     $notePath = [string]$match.State.notePath
     if (-not [System.IO.File]::Exists($notePath)) { throw "Daily note is missing: $notePath" }
@@ -106,7 +137,18 @@ try {
         # Marker matching supports calls that began on an older script version.
         if (($pendingLine -and $lineList[$i] -eq $pendingLine) -or $lineList[$i].Contains($marker)) {
             $lineList[$i] = $completed
-            if ($i + 1 -ge $lineList.Count -or $lineList[$i + 1] -ne $callerLine) {
+            $callerIndex = -1
+            $lastNearbyLine = [Math]::Min($lineList.Count - 1, $i + 4)
+            for ($j = $i + 1; $j -le $lastNearbyLine; $j++) {
+                if (($originalCallerLine -and $lineList[$j] -eq $originalCallerLine) -or $lineList[$j] -eq $callerLine) {
+                    $callerIndex = $j
+                    break
+                }
+            }
+            if ($callerIndex -ge 0) {
+                $lineList[$callerIndex] = $callerLine
+            } elseif ([int]$match.State.formatVersion -lt 2) {
+                # Compatibility for state created by the older list format.
                 $lineList.Insert($i + 1, $callerLine)
             }
             $found = $true
